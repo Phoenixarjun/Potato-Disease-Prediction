@@ -22,7 +22,9 @@ import {
   CircularProgress,
   Box,
   Fade,
-  Grow
+  Grow,
+  Link,
+  Divider
 } from "@material-ui/core";
 import { DropzoneArea } from 'material-ui-dropzone';
 import { common } from '@material-ui/core/colors';
@@ -38,9 +40,15 @@ const ColorButton = withStyles((theme) => ({
     backgroundColor: common.white,
     '&:hover': {
       backgroundColor: '#f5f5f5',
+      transform: 'translateY(-2px)',
     },
     transition: 'all 0.3s ease',
-    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+    borderRadius: '12px',
+    padding: '12px 24px',
+    fontSize: '16px',
+    fontWeight: 600,
+    marginTop: theme.spacing(3),
   },
 }))(Button);
 
@@ -49,23 +57,6 @@ const axios = require("axios").default;
 const useStyles = makeStyles((theme) => ({
   grow: {
     flexGrow: 1,
-  },
-  clearButton: {
-    width: "100%",
-    borderRadius: "12px",
-    padding: "14px 22px",
-    color: "#4a4a4a",
-    fontSize: "16px",
-    fontWeight: 600,
-    marginTop: theme.spacing(3),
-    transition: 'all 0.3s ease',
-    '&:hover': {
-      transform: 'translateY(-3px)',
-      boxShadow: '0 8px 15px rgba(0, 0, 0, 0.2)',
-    },
-    '&:active': {
-      transform: 'translateY(1px)',
-    },
   },
   root: {
     maxWidth: 345,
@@ -79,6 +70,7 @@ const useStyles = makeStyles((theme) => ({
     alignItems: 'center',
     backgroundColor: '#f9f9f9',
     overflow: 'hidden',
+    borderRadius: '16px 16px 0 0',
   },
   media: {
     maxHeight: '100%',
@@ -96,7 +88,7 @@ const useStyles = makeStyles((theme) => ({
   gridContainer: {
     justifyContent: "center",
     padding: "2em 1em",
-    minHeight: 'calc(100vh - 64px)',
+    minHeight: 'calc(100vh - 164px)',
     [theme.breakpoints.up('md')]: {
       padding: "4em 2em",
     },
@@ -185,7 +177,7 @@ const useStyles = makeStyles((theme) => ({
     boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
     color: 'white',
     padding: '0 2em',
-    height: '70px',
+    height: '80px',
     display: 'flex',
     justifyContent: 'center',
   },
@@ -264,43 +256,85 @@ const useStyles = makeStyles((theme) => ({
     width: '100%',
     maxWidth: 1200,
     margin: '0 auto',
+    padding: '0 24px',
   },
   contentWrapper: {
     width: '100%',
     maxWidth: 500,
     margin: '0 auto',
   },
+  headerContent: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    padding: theme.spacing(4, 2),
+    textAlign: 'center',
+  },
+  headerTitle: {
+    fontWeight: 800,
+    fontSize: '2.5rem',
+    marginBottom: theme.spacing(1),
+    background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    fontFamily: "'Poppins', sans-serif",
+  },
+  headerSubtitle: {
+    fontSize: '1.2rem',
+    color: '#666',
+    maxWidth: '600px',
+    marginBottom: theme.spacing(3),
+  },
+  footer: {
+    backgroundColor: '#f8f9fa',
+    padding: theme.spacing(3),
+    textAlign: 'center',
+    borderTop: '1px solid rgba(0, 0, 0, 0.1)',
+    marginTop: 'auto',
+  },
+  footerText: {
+    color: '#666',
+    fontSize: '0.9rem',
+  },
 }));
 
 export const ImageUpload = () => {
   const classes = useStyles();
-  const [selectedFile, setSelectedFile] = useState();
-  const [preview, setPreview] = useState();
-  const [data, setData] = useState();
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [data, setData] = useState(null);
   const [image, setImage] = useState(false);
-  const [isLoading, setIsloading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [showButton, setShowButton] = useState(false);
-  let confidence = 0;
+  const [error, setError] = useState(null);
 
   const sendFile = async () => {
-    if (image) {
-      let formData = new FormData();
-      formData.append("file", selectedFile);
-      try {
-        let res = await axios({
-          method: "post",
-          url: process.env.REACT_APP_API_URL,
-          data: formData,
-        });
-        if (res.status === 200) {
-          setData(res.data);
-          setShowButton(true);
+    if (!selectedFile) return;
+    
+    let formData = new FormData();
+    formData.append("file", selectedFile);
+    
+    try {
+      setIsLoading(true);
+      setError(null);
+      const res = await axios({
+        method: "post",
+        url: process.env.REACT_APP_API_URL,
+        data: formData,
+        headers: {
+          'Content-Type': 'multipart/form-data'
         }
-      } catch (error) {
-        console.error("Error uploading file:", error);
-      } finally {
-        setIsloading(false);
+      });
+      
+      if (res.status === 200) {
+        setData(res.data);
+        setShowButton(true);
       }
+    } catch (err) {
+      console.error("Error uploading file:", err);
+      setError("Failed to analyze image. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -310,11 +344,12 @@ export const ImageUpload = () => {
     setImage(false);
     setSelectedFile(null);
     setPreview(null);
+    setError(null);
   };
 
   useEffect(() => {
     if (!selectedFile) {
-      setPreview(undefined);
+      setPreview(null);
       return;
     }
     const objectUrl = URL.createObjectURL(selectedFile);
@@ -324,39 +359,36 @@ export const ImageUpload = () => {
   }, [selectedFile]);
 
   useEffect(() => {
-    if (!preview) {
-      return;
+    if (image && preview) {
+      sendFile();
     }
-    setIsloading(true);
-    sendFile();
-  }, [preview]);
+  }, [image, preview]);
 
   const onSelectFile = (files) => {
     if (!files || files.length === 0) {
-      setSelectedFile(undefined);
-      setImage(false);
-      setData(undefined);
+      clearData();
       return;
     }
     setSelectedFile(files[0]);
-    setData(undefined);
+    setData(null);
     setImage(true);
   };
 
-  if (data && data.confidence) {
-    confidence = data.confidence; 
-  }
+  const confidence = data && data.confidence 
+    ? Math.round(data.confidence * 1000) / 10 // Convert to percentage with one decimal
+    : 0;
 
   return (
     <React.Fragment>
-      <AppBar position="static" className={classes.appbar}>
-        <Toolbar className={classes.toolbar}>
-          <Typography className={classes.title} variant="h6" noWrap>
-            <SpaIcon style={{ marginRight: '10px', verticalAlign: 'middle' }} />
-            Potato Disease Classifier
-          </Typography>
-        </Toolbar>
-      </AppBar>
+      <Box className={classes.headerContent}>
+        <Typography variant="h1" className={classes.headerTitle}>
+          AI-Powered Potato Disease Detection
+        </Typography>
+        <Typography variant="subtitle1" className={classes.headerSubtitle}>
+          Upload an image of a potato leaf and our machine learning model will analyze it for early signs of disease
+        </Typography>
+      </Box>
+
       <Container maxWidth={false} className={classes.mainContainer} disableGutters={true}>
         <Grid
           className={classes.gridContainer}
@@ -401,6 +433,13 @@ export const ImageUpload = () => {
                       />
                     </CardContent>
                   )}
+                  {error && (
+                    <CardContent className={classes.detail}>
+                      <Typography color="error" variant="body1">
+                        {error}
+                      </Typography>
+                    </CardContent>
+                  )}
                   {data && (
                     <CardContent className={classes.detail}>
                       <Box className={classes.resultContainer}>
@@ -415,14 +454,14 @@ export const ImageUpload = () => {
                             <TableBody className={classes.tableBody}>
                               <TableRow className={classes.tableRow}>
                                 <TableCell component="th" scope="row" className={classes.tableCell}>
-                                  {data.class.toLowerCase().includes('healthy') ? (
-                                    <span><HealingIcon className={classes.healthyIcon} /> {data.class}</span>
+                                  {data[0].toLowerCase().includes('healthy') ? (
+                                    <span><HealingIcon className={classes.healthyIcon} /> {data[0]}</span>
                                   ) : (
-                                    <span><HealingIcon className={classes.diseaseIcon} /> {data.class}</span>
+                                    <span><SpaIcon className={classes.diseaseIcon} /> {data[0]}</span>
                                   )}
                                 </TableCell>
                                 <TableCell align="right" className={classes.tableCell}>
-                                  {confidence}
+                                  {data[1]}
                                   <div className={classes.confidenceMeter}>
                                     <div 
                                       className={classes.confidenceBar} 
@@ -452,7 +491,6 @@ export const ImageUpload = () => {
                   <Grid item className={classes.buttonGrid}>
                     <ColorButton 
                       variant="contained" 
-                      className={classes.clearButton} 
                       onClick={clearData} 
                       startIcon={<Clear />}
                       fullWidth
@@ -466,6 +504,16 @@ export const ImageUpload = () => {
           </Grid>
         </Grid>
       </Container>
+
+      <footer className={classes.footer}>
+        <Divider style={{ marginBottom: '16px' }} />
+        <Typography variant="body2" className={classes.footerText}>
+          Created with ❤️ by Naresh B A
+        </Typography>
+        <Typography variant="caption" display="block" className={classes.footerText} style={{ marginTop: '8px' }}>
+          © {new Date().getFullYear()} Potato Disease Classifier
+        </Typography>
+      </footer>
     </React.Fragment>
   );
 };
